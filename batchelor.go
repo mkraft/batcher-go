@@ -7,7 +7,6 @@ import (
 
 type Message interface {
 	Type() string
-	Data() interface{}
 }
 
 // Handler configures a desired behavior for a category or type of messages.
@@ -19,18 +18,11 @@ type Handler struct {
 	// Match defined a function that is invoked upon each incoming message. If it returns true then the
 	// given message will be enqueued in a new or existing queue of the returned name.
 	Match func(Message) (string, bool)
-
-	// Reduce defines the function that is invoked on a list of outgoing messages from a given queue.
-	Reduce ReducerFunc
 }
-
-// ReducerFunc defines the signature of a Reduce function that is invoked on the list of outgoing
-// messages.
-type ReducerFunc func(messages []Message) Message
 
 type Proxy struct {
 	in           chan Message
-	Out          chan Message
+	Out          chan []Message
 	ctx          context.Context
 	handlers     []*Handler
 	queueTimeout chan *timeoutInfo
@@ -41,13 +33,12 @@ func (p *Proxy) In(message Message) {
 }
 
 type queueItem struct {
-	reducer  ReducerFunc
 	messages []Message
 }
 
 type queue map[string]*queueItem
 
-func (q queue) enqueue(name string, message Message, reduer ReducerFunc) (appended bool) {
+func (q queue) enqueue(name string, message Message) (appended bool) {
 	var newMessages []Message
 	forName, has := q[name]
 	if has {
@@ -55,13 +46,12 @@ func (q queue) enqueue(name string, message Message, reduer ReducerFunc) (append
 	} else {
 		newMessages = []Message{message}
 	}
-	q[name] = &queueItem{messages: newMessages, reducer: reduer}
+	q[name] = &queueItem{messages: newMessages}
 	return has
 }
 
 type timeoutInfo struct {
-	name    string
-	reducer ReducerFunc
+	name string
 }
 
 func (p *Proxy) listen() {
@@ -80,12 +70,12 @@ func (p *Proxy) listen() {
 
 				handled = true
 
-				hasExistingTimeout := q.enqueue(name, message, handler.Reduce)
+				hasExistingTimeout := q.enqueue(name, message)
 				if hasExistingTimeout {
 					continue
 				}
 
-				go p.runTimeout(handler.Wait, &timeoutInfo{name: name, reducer: handler.Reduce})
+				go p.runTimeout(handler.Wait, &timeoutInfo{name: name})
 
 				// break out of the handlers loop so that only one matched handler is ever triggered for a given message
 				break
@@ -93,15 +83,15 @@ func (p *Proxy) listen() {
 
 			if !handled {
 				// a message that doesn't match any handlers is sent out immediately
-				p.Out <- message
+				p.Out <- []Message{message}
 			}
 		case info := <-p.queueTimeout:
-			p.Out <- info.reducer(q[info.name].messages)
+			p.Out <- q[info.name].messages
 			delete(q, info.name)
 		case <-p.ctx.Done():
 			// flush all queues manually if context is done
 			for _, item := range q {
-				p.Out <- item.reducer(item.messages)
+				p.Out <- item.messages
 			}
 			close(p.Out)
 			return
@@ -128,7 +118,7 @@ func NewProxy(ctx context.Context, handlers []*Handler) *Proxy {
 		ctx:          ctx,
 		handlers:     handlers,
 		in:           make(chan Message),
-		Out:          make(chan Message),
+		Out:          make(chan []Message),
 		queueTimeout: make(chan *timeoutInfo),
 	}
 	go proxy.listen()

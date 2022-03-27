@@ -3,7 +3,6 @@ package batchelor_test
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	batchelor "github.com/mkraft/batchelorgo"
@@ -18,13 +17,6 @@ func ExampleNewProxy() {
 			}
 			return "some-type-queue", true
 		},
-		Reduce: func(messages []batchelor.Message) batchelor.Message {
-			datas := []string{}
-			for _, msg := range messages {
-				datas = append(datas, msg.Data().(string))
-			}
-			return &testMessage{id: "some-type-combined", data: strings.Join(datas, ":")}
-		},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -38,18 +30,5 @@ func ExampleNewProxy() {
 
 	fmt.Printf("%+v", <-proxy.Out)
 
-	// Output: &{id:some-type-combined data:data1:data2}
-}
-
-func ExampleReducerFunc() {
-	var keepFirst batchelor.ReducerFunc
-	keepFirst = func(messages []batchelor.Message) batchelor.Message {
-		return messages[0]
-	}
-	queueMessages := []batchelor.Message{
-		&testMessage{id: "test", data: "data1"},
-		&testMessage{id: "test", data: "data2"},
-	}
-	fmt.Println(keepFirst(queueMessages))
-	// Output: &{test data1}
+	// Output: [id: some-type, data: data1 id: some-type, data: data2]
 }
