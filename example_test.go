@@ -3,6 +3,7 @@ package batchelor_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	batchelor "github.com/mkraft/batchelorg"
@@ -18,7 +19,11 @@ func ExampleNewProxy() {
 			return "some-type-queue", true
 		},
 		Reduce: func(messages []batchelor.Message) batchelor.Message {
-			return messages[0]
+			datas := []string{}
+			for _, msg := range messages {
+				datas = append(datas, msg.Data().(string))
+			}
+			return &testMessage{id: "some-type-combined", data: strings.Join(datas, ":")}
 		},
 	}
 
@@ -31,7 +36,7 @@ func ExampleNewProxy() {
 
 	cancel()
 
-	fmt.Println(<-proxy.Out)
+	fmt.Printf("%+v", <-proxy.Out)
 
-	// Output: &{some-type data1}
+	// Output: &{id:some-type-combined data:data1:data2}
 }
