@@ -61,7 +61,7 @@ func TestNotHandled(t *testing.T) {
 func TestHandled_ContextCancel(t *testing.T) {
 	testHandler := &batchelor.Handler{
 		Wait:  time.Minute,
-		Match: func(mgs batchelor.Message) (string, bool) { return "fooQueue", true },
+		Match: func(msg batchelor.Message) (string, bool) { return "fooQueue", true },
 		Reduce: func(messages []batchelor.Message) batchelor.Message {
 			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
 			return &testMessage{id: "reducedFoos", data: combinedData}
@@ -98,7 +98,7 @@ func TestHandled_QueueTimeout(t *testing.T) {
 	testWaitDur := time.Second
 	testHandler := &batchelor.Handler{
 		Wait:  testWaitDur,
-		Match: func(mgs batchelor.Message) (string, bool) { return "fooQueue", true },
+		Match: func(msg batchelor.Message) (string, bool) { return "fooQueue", true },
 		Reduce: func(messages []batchelor.Message) batchelor.Message {
 			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
 			return &testMessage{id: "reducedFoos", data: combinedData}
@@ -137,8 +137,8 @@ func TestHandled_QueueTimeout(t *testing.T) {
 func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 	fooHandler := &batchelor.Handler{
 		Wait: time.Minute,
-		Match: func(mgs batchelor.Message) (string, bool) {
-			if mgs.Type() != "foo" {
+		Match: func(msg batchelor.Message) (string, bool) {
+			if msg.Type() != "foo" {
 				return "", false
 			}
 			return "fooQueue", true
@@ -150,8 +150,8 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 	}
 	barHandler := &batchelor.Handler{
 		Wait: time.Minute,
-		Match: func(mgs batchelor.Message) (string, bool) {
-			if mgs.Type() != "bar" {
+		Match: func(msg batchelor.Message) (string, bool) {
+			if msg.Type() != "bar" {
 				return "", false
 			}
 			return "barQueue", true
@@ -199,8 +199,8 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 	testWaitDur := time.Second
 	fooHandler := &batchelor.Handler{
 		Wait: testWaitDur,
-		Match: func(mgs batchelor.Message) (string, bool) {
-			if mgs.Type() != "foo" {
+		Match: func(msg batchelor.Message) (string, bool) {
+			if msg.Type() != "foo" {
 				return "", false
 			}
 			return "fooQueue", true
@@ -212,8 +212,8 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 	}
 	barHandler := &batchelor.Handler{
 		Wait: testWaitDur,
-		Match: func(mgs batchelor.Message) (string, bool) {
-			if mgs.Type() != "bar" {
+		Match: func(msg batchelor.Message) (string, bool) {
+			if msg.Type() != "bar" {
 				return "", false
 			}
 			return "barQueue", true

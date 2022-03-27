@@ -105,6 +105,7 @@ func (p *Proxy) runTimeout(dur time.Duration, info *timeoutInfo) {
 	}
 }
 
+// NewProxy is the factory.
 func NewProxy(ctx context.Context, handlers []*Handler) *Proxy {
 	proxy := &Proxy{
 		ctx:          ctx,
