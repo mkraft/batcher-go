@@ -1,4 +1,4 @@
-package batchelor
+package batchelor_test
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	batchelor "github.com/mkraft/batchelorg"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,18 +24,18 @@ func (m *testMessage) Data() interface{} {
 }
 
 func TestNotHandled(t *testing.T) {
-	noOpMatcher := func(msg Message) (string, bool) { return "", false }
+	noOpMatcher := func(msg batchelor.Message) (string, bool) { return "", false }
 
-	testHandler := &Handler{
+	testHandler := &batchelor.Handler{
 		Wait:   0,
 		Match:  noOpMatcher,
-		Reduce: func(messages []Message) Message { return messages[0] },
+		Reduce: func(messages []batchelor.Message) batchelor.Message { return messages[0] },
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := NewProxy(ctx, []*Handler{testHandler})
+	proxy := batchelor.NewProxy(ctx, []*batchelor.Handler{testHandler})
 
 	wait := make(chan bool)
-	actual := []Message{}
+	actual := []batchelor.Message{}
 
 	go func() {
 		for message := range proxy.Out {
@@ -58,19 +59,19 @@ func TestNotHandled(t *testing.T) {
 }
 
 func TestHandled_ContextCancel(t *testing.T) {
-	testHandler := &Handler{
+	testHandler := &batchelor.Handler{
 		Wait:  time.Minute,
-		Match: func(mgs Message) (string, bool) { return "fooQueue", true },
-		Reduce: func(messages []Message) Message {
+		Match: func(mgs batchelor.Message) (string, bool) { return "fooQueue", true },
+		Reduce: func(messages []batchelor.Message) batchelor.Message {
 			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
 			return &testMessage{id: "reducedFoos", data: combinedData}
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := NewProxy(ctx, []*Handler{testHandler})
+	proxy := batchelor.NewProxy(ctx, []*batchelor.Handler{testHandler})
 
 	wait := make(chan bool)
-	actual := []Message{}
+	actual := []batchelor.Message{}
 
 	go func() {
 		for message := range proxy.Out {
@@ -95,19 +96,19 @@ func TestHandled_ContextCancel(t *testing.T) {
 
 func TestHandled_QueueTimeout(t *testing.T) {
 	testWaitDur := time.Second
-	testHandler := &Handler{
+	testHandler := &batchelor.Handler{
 		Wait:  testWaitDur,
-		Match: func(mgs Message) (string, bool) { return "fooQueue", true },
-		Reduce: func(messages []Message) Message {
+		Match: func(mgs batchelor.Message) (string, bool) { return "fooQueue", true },
+		Reduce: func(messages []batchelor.Message) batchelor.Message {
 			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
 			return &testMessage{id: "reducedFoos", data: combinedData}
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := NewProxy(ctx, []*Handler{testHandler})
+	proxy := batchelor.NewProxy(ctx, []*batchelor.Handler{testHandler})
 
 	wait := make(chan bool)
-	actual := []Message{}
+	actual := []batchelor.Message{}
 
 	go func() {
 		for message := range proxy.Out {
@@ -134,37 +135,37 @@ func TestHandled_QueueTimeout(t *testing.T) {
 }
 
 func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
-	fooHandler := &Handler{
+	fooHandler := &batchelor.Handler{
 		Wait: time.Minute,
-		Match: func(mgs Message) (string, bool) {
+		Match: func(mgs batchelor.Message) (string, bool) {
 			if mgs.Type() != "foo" {
 				return "", false
 			}
 			return "fooQueue", true
 		},
-		Reduce: func(messages []Message) Message {
+		Reduce: func(messages []batchelor.Message) batchelor.Message {
 			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
 			return &testMessage{id: "reducedFoos", data: combinedData}
 		},
 	}
-	barHandler := &Handler{
+	barHandler := &batchelor.Handler{
 		Wait: time.Minute,
-		Match: func(mgs Message) (string, bool) {
+		Match: func(mgs batchelor.Message) (string, bool) {
 			if mgs.Type() != "bar" {
 				return "", false
 			}
 			return "barQueue", true
 		},
-		Reduce: func(messages []Message) Message {
+		Reduce: func(messages []batchelor.Message) batchelor.Message {
 			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
 			return &testMessage{id: "reducedBars", data: combinedData}
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := NewProxy(ctx, []*Handler{fooHandler, barHandler})
+	proxy := batchelor.NewProxy(ctx, []*batchelor.Handler{fooHandler, barHandler})
 
 	wait := make(chan bool)
-	actual := []Message{}
+	actual := []batchelor.Message{}
 
 	go func() {
 		for message := range proxy.Out {
@@ -196,37 +197,37 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 
 func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 	testWaitDur := time.Second
-	fooHandler := &Handler{
+	fooHandler := &batchelor.Handler{
 		Wait: testWaitDur,
-		Match: func(mgs Message) (string, bool) {
+		Match: func(mgs batchelor.Message) (string, bool) {
 			if mgs.Type() != "foo" {
 				return "", false
 			}
 			return "fooQueue", true
 		},
-		Reduce: func(messages []Message) Message {
+		Reduce: func(messages []batchelor.Message) batchelor.Message {
 			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
 			return &testMessage{id: "reducedFoos", data: combinedData}
 		},
 	}
-	barHandler := &Handler{
+	barHandler := &batchelor.Handler{
 		Wait: testWaitDur,
-		Match: func(mgs Message) (string, bool) {
+		Match: func(mgs batchelor.Message) (string, bool) {
 			if mgs.Type() != "bar" {
 				return "", false
 			}
 			return "barQueue", true
 		},
-		Reduce: func(messages []Message) Message {
+		Reduce: func(messages []batchelor.Message) batchelor.Message {
 			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
 			return &testMessage{id: "reducedBars", data: combinedData}
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := NewProxy(ctx, []*Handler{fooHandler, barHandler})
+	proxy := batchelor.NewProxy(ctx, []*batchelor.Handler{fooHandler, barHandler})
 
 	wait := make(chan bool)
-	actual := []Message{}
+	actual := []batchelor.Message{}
 
 	go func() {
 		for message := range proxy.Out {
