@@ -1,4 +1,4 @@
-# Batchelorg
+# Batchelorgo
 
 A message batching and/or buffering module for incoming or outgoing messages.
 
