@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	batchelor "github.com/mkraft/batchelorgo"
+	batchelor "github.com/mkraft/batchelorgo/v2"
 	"github.com/stretchr/testify/require"
 )
 
