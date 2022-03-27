@@ -17,3 +17,7 @@ https://github.com/mkraft/wsproxy
 ```shell
 make test
 ```
+
+## Godoc
+
+https://pkg.go.dev/github.com/mkraft/batchelorg

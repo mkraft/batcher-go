@@ -72,7 +72,7 @@ func (p *Proxy) listen() {
 	for {
 		select {
 		case <-p.ctx.Done():
-			// flush all queues manually
+			// flush all queues manually if context is done
 			for _, item := range q {
 				p.Out <- item.reducer(item.messages)
 				wg.Done()
@@ -90,11 +90,13 @@ func (p *Proxy) listen() {
 						wg.Add(1)
 						go p.runTimeout(handler.Wait, &timeoutInfo{name: name, reducer: handler.Reduce})
 					}
+					// break out of the p.handlers loop so that only one matched handler is ever used
 					break
 				}
 			}
 
 			if !wasHandled {
+				// this means it's a message that doesn't match any handlers so send it out immediately
 				p.Out <- message
 			}
 		case info := <-p.queueTimeout:
@@ -111,6 +113,9 @@ func (p *Proxy) runTimeout(dur time.Duration, info *timeoutInfo) {
 		p.queueTimeout <- info
 		return
 	case <-p.ctx.Done():
+		// when the context is done return from the listen immediately
+		// and let the ctx.Done select case in (*Proxy).listen send out
+		// all of the messages in the queue, rather than using queueTimeout case.
 		return
 	}
 }
