@@ -11,3 +11,9 @@ go get github.com/mkraft/bathelorg
 ## Example
 
 https://github.com/mkraft/wsproxy
+
+## Tests
+
+```shell
+make test
+```
