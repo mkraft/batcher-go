@@ -11,13 +11,23 @@ type Message interface {
 	Data() interface{}
 }
 
+// Handler configures a desired behavior for a category or type of messages.
 type Handler struct {
-	Wait   time.Duration
-	Match  func(Message) (string, bool)
-	Reduce reducerFunc
+	// Wait is the total duration that a queue will continue enqueuing like messages after the first
+	// one is received.
+	Wait time.Duration
+
+	// Match defined a function that is invoked upon each incoming message. If it returns true then the
+	// given message will be enqueued in a new or existing queue of the returned name.
+	Match func(Message) (string, bool)
+
+	// Reduce defines the function that is invoked on a list of outgoing messages from a given queue.
+	Reduce ReducerFunc
 }
 
-type reducerFunc func(messages []Message) Message
+// ReducerFunc defines the signature of a Reduce function that is invoked on the list of outgoing
+// messages.
+type ReducerFunc func(messages []Message) Message
 
 type Proxy struct {
 	in           chan Message
@@ -32,13 +42,13 @@ func (p *Proxy) In(message Message) {
 }
 
 type queueItem struct {
-	reducer  reducerFunc
+	reducer  ReducerFunc
 	messages []Message
 }
 
 type queue map[string]*queueItem
 
-func (q queue) enqueue(name string, message Message, reduer reducerFunc) (appended bool) {
+func (q queue) enqueue(name string, message Message, reduer ReducerFunc) (appended bool) {
 	var newMessages []Message
 	forName, has := q[name]
 	if has {
@@ -52,7 +62,7 @@ func (q queue) enqueue(name string, message Message, reduer reducerFunc) (append
 
 type timeoutInfo struct {
 	name    string
-	reducer reducerFunc
+	reducer ReducerFunc
 }
 
 func (p *Proxy) listen() {

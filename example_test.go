@@ -40,3 +40,16 @@ func ExampleNewProxy() {
 
 	// Output: &{id:some-type-combined data:data1:data2}
 }
+
+func ExampleReducerFunc() {
+	var keepFirst batchelor.ReducerFunc
+	keepFirst = func(messages []batchelor.Message) batchelor.Message {
+		return messages[0]
+	}
+	queueMessages := []batchelor.Message{
+		&testMessage{id: "test", data: "data1"},
+		&testMessage{id: "test", data: "data2"},
+	}
+	fmt.Println(keepFirst(queueMessages))
+	// Output: &{test data1}
+}
