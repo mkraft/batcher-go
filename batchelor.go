@@ -2,7 +2,6 @@ package batchelor
 
 import (
 	"context"
-	"sync"
 	"time"
 )
 
@@ -67,7 +66,6 @@ type timeoutInfo struct {
 
 func (p *Proxy) listen() {
 	q := make(queue)
-	var wg sync.WaitGroup
 
 	for {
 		select {
@@ -87,7 +85,6 @@ func (p *Proxy) listen() {
 					continue
 				}
 
-				wg.Add(1)
 				go p.runTimeout(handler.Wait, &timeoutInfo{name: name, reducer: handler.Reduce})
 
 				// break out of the handlers loop so that only one matched handler is ever triggered for a given message
@@ -101,14 +98,11 @@ func (p *Proxy) listen() {
 		case info := <-p.queueTimeout:
 			p.Out <- info.reducer(q[info.name].messages)
 			delete(q, info.name)
-			wg.Done()
 		case <-p.ctx.Done():
 			// flush all queues manually if context is done
 			for _, item := range q {
 				p.Out <- item.reducer(item.messages)
-				wg.Done()
 			}
-			wg.Wait()
 			close(p.Out)
 			return
 		}
