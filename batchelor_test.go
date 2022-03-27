@@ -9,19 +9,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type testMessage struct {
+	id   string
+	data interface{}
+}
+
+func (m *testMessage) Type() string {
+	return m.id
+}
+
+func (m *testMessage) Data() interface{} {
+	return m.data
+}
+
 func TestNotHandled(t *testing.T) {
-	noOpMatcher := func(evt *Message) (string, bool) { return "", false }
+	noOpMatcher := func(msg Message) (string, bool) { return "", false }
 
 	testHandler := &Handler{
 		Wait:   0,
 		Match:  noOpMatcher,
-		Reduce: func(messages []*Message) *Message { return messages[0] },
+		Reduce: func(messages []Message) Message { return messages[0] },
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	proxy := NewProxy(ctx, []*Handler{testHandler})
 
 	wait := make(chan bool)
-	actual := []*Message{}
+	actual := []Message{}
 
 	go func() {
 		for message := range proxy.Out {
@@ -30,8 +43,8 @@ func TestNotHandled(t *testing.T) {
 		wait <- true
 	}()
 
-	testMessage1 := &Message{Type: "foo", Data: "test123"}
-	testMessage2 := &Message{Type: "bar", Data: "test456"}
+	testMessage1 := &testMessage{id: "foo", data: "test123"}
+	testMessage2 := &testMessage{id: "bar", data: "test456"}
 
 	proxy.In(testMessage1)
 	proxy.In(testMessage2)
@@ -47,17 +60,17 @@ func TestNotHandled(t *testing.T) {
 func TestHandled_ContextCancel(t *testing.T) {
 	testHandler := &Handler{
 		Wait:  time.Minute,
-		Match: func(evt *Message) (string, bool) { return "fooQueue", true },
-		Reduce: func(messages []*Message) *Message {
-			combinedData := fmt.Sprintf("%v:%v", messages[0].Data, messages[1].Data)
-			return &Message{Type: "reducedFoos", Data: combinedData}
+		Match: func(mgs Message) (string, bool) { return "fooQueue", true },
+		Reduce: func(messages []Message) Message {
+			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
+			return &testMessage{id: "reducedFoos", data: combinedData}
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	proxy := NewProxy(ctx, []*Handler{testHandler})
 
 	wait := make(chan bool)
-	actual := []*Message{}
+	actual := []Message{}
 
 	go func() {
 		for message := range proxy.Out {
@@ -66,8 +79,8 @@ func TestHandled_ContextCancel(t *testing.T) {
 		wait <- true
 	}()
 
-	testMessage1 := &Message{Type: "foo", Data: "test123"}
-	testMessage2 := &Message{Type: "foo", Data: "test456"}
+	testMessage1 := &testMessage{id: "foo", data: "test123"}
+	testMessage2 := &testMessage{id: "foo", data: "test456"}
 
 	proxy.In(testMessage1)
 	proxy.In(testMessage2)
@@ -76,25 +89,25 @@ func TestHandled_ContextCancel(t *testing.T) {
 
 	<-wait
 
-	require.Equal(t, actual[0].Type, "reducedFoos")
-	require.Equal(t, actual[0].Data, "test123:test456")
+	require.Equal(t, actual[0].Type(), "reducedFoos")
+	require.Equal(t, actual[0].Data(), "test123:test456")
 }
 
 func TestHandled_QueueTimeout(t *testing.T) {
 	testWaitDur := time.Second
 	testHandler := &Handler{
 		Wait:  testWaitDur,
-		Match: func(evt *Message) (string, bool) { return "fooQueue", true },
-		Reduce: func(messages []*Message) *Message {
-			combinedData := fmt.Sprintf("%v:%v", messages[0].Data, messages[1].Data)
-			return &Message{Type: "reducedFoos", Data: combinedData}
+		Match: func(mgs Message) (string, bool) { return "fooQueue", true },
+		Reduce: func(messages []Message) Message {
+			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
+			return &testMessage{id: "reducedFoos", data: combinedData}
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	proxy := NewProxy(ctx, []*Handler{testHandler})
 
 	wait := make(chan bool)
-	actual := []*Message{}
+	actual := []Message{}
 
 	go func() {
 		for message := range proxy.Out {
@@ -103,8 +116,8 @@ func TestHandled_QueueTimeout(t *testing.T) {
 		wait <- true
 	}()
 
-	testMessage1 := &Message{Type: "foo", Data: "test123"}
-	testMessage2 := &Message{Type: "foo", Data: "test456"}
+	testMessage1 := &testMessage{id: "foo", data: "test123"}
+	testMessage2 := &testMessage{id: "foo", data: "test456"}
 
 	proxy.In(testMessage1)
 	proxy.In(testMessage2)
@@ -116,42 +129,42 @@ func TestHandled_QueueTimeout(t *testing.T) {
 
 	<-wait
 
-	require.Equal(t, actual[0].Type, "reducedFoos")
-	require.Equal(t, actual[0].Data, "test123:test456")
+	require.Equal(t, actual[0].Type(), "reducedFoos")
+	require.Equal(t, actual[0].Data(), "test123:test456")
 }
 
 func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 	fooHandler := &Handler{
 		Wait: time.Minute,
-		Match: func(evt *Message) (string, bool) {
-			if evt.Type != "foo" {
+		Match: func(mgs Message) (string, bool) {
+			if mgs.Type() != "foo" {
 				return "", false
 			}
 			return "fooQueue", true
 		},
-		Reduce: func(messages []*Message) *Message {
-			combinedData := fmt.Sprintf("%v:%v", messages[0].Data, messages[1].Data)
-			return &Message{Type: "reducedFoos", Data: combinedData}
+		Reduce: func(messages []Message) Message {
+			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
+			return &testMessage{id: "reducedFoos", data: combinedData}
 		},
 	}
 	barHandler := &Handler{
 		Wait: time.Minute,
-		Match: func(evt *Message) (string, bool) {
-			if evt.Type != "bar" {
+		Match: func(mgs Message) (string, bool) {
+			if mgs.Type() != "bar" {
 				return "", false
 			}
 			return "barQueue", true
 		},
-		Reduce: func(messages []*Message) *Message {
-			combinedData := fmt.Sprintf("%v:%v", messages[0].Data, messages[1].Data)
-			return &Message{Type: "reducedBars", Data: combinedData}
+		Reduce: func(messages []Message) Message {
+			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
+			return &testMessage{id: "reducedBars", data: combinedData}
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	proxy := NewProxy(ctx, []*Handler{fooHandler, barHandler})
 
 	wait := make(chan bool)
-	actual := []*Message{}
+	actual := []Message{}
 
 	go func() {
 		for message := range proxy.Out {
@@ -160,10 +173,10 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 		wait <- true
 	}()
 
-	testMessage1 := &Message{Type: "foo", Data: "foodata1"}
-	testMessage2 := &Message{Type: "foo", Data: "foodata2"}
-	testMessage3 := &Message{Type: "bar", Data: "bardata1"}
-	testMessage4 := &Message{Type: "bar", Data: "bardata2"}
+	testMessage1 := &testMessage{id: "foo", data: "foodata1"}
+	testMessage2 := &testMessage{id: "foo", data: "foodata2"}
+	testMessage3 := &testMessage{id: "bar", data: "bardata1"}
+	testMessage4 := &testMessage{id: "bar", data: "bardata2"}
 
 	proxy.In(testMessage1)
 	proxy.In(testMessage2)
@@ -174,8 +187,8 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 
 	<-wait
 
-	expect1 := &Message{Type: "reducedFoos", Data: "foodata1:foodata2"}
-	expect2 := &Message{Type: "reducedBars", Data: "bardata1:bardata2"}
+	expect1 := &testMessage{id: "reducedFoos", data: "foodata1:foodata2"}
+	expect2 := &testMessage{id: "reducedBars", data: "bardata1:bardata2"}
 
 	require.Contains(t, actual, expect1)
 	require.Contains(t, actual, expect2)
@@ -185,35 +198,35 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 	testWaitDur := time.Second
 	fooHandler := &Handler{
 		Wait: testWaitDur,
-		Match: func(evt *Message) (string, bool) {
-			if evt.Type != "foo" {
+		Match: func(mgs Message) (string, bool) {
+			if mgs.Type() != "foo" {
 				return "", false
 			}
 			return "fooQueue", true
 		},
-		Reduce: func(messages []*Message) *Message {
-			combinedData := fmt.Sprintf("%v:%v", messages[0].Data, messages[1].Data)
-			return &Message{Type: "reducedFoos", Data: combinedData}
+		Reduce: func(messages []Message) Message {
+			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
+			return &testMessage{id: "reducedFoos", data: combinedData}
 		},
 	}
 	barHandler := &Handler{
 		Wait: testWaitDur,
-		Match: func(evt *Message) (string, bool) {
-			if evt.Type != "bar" {
+		Match: func(mgs Message) (string, bool) {
+			if mgs.Type() != "bar" {
 				return "", false
 			}
 			return "barQueue", true
 		},
-		Reduce: func(messages []*Message) *Message {
-			combinedData := fmt.Sprintf("%v:%v", messages[0].Data, messages[1].Data)
-			return &Message{Type: "reducedBars", Data: combinedData}
+		Reduce: func(messages []Message) Message {
+			combinedData := fmt.Sprintf("%v:%v", messages[0].Data(), messages[1].Data())
+			return &testMessage{id: "reducedBars", data: combinedData}
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	proxy := NewProxy(ctx, []*Handler{fooHandler, barHandler})
 
 	wait := make(chan bool)
-	actual := []*Message{}
+	actual := []Message{}
 
 	go func() {
 		for message := range proxy.Out {
@@ -222,10 +235,10 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 		wait <- true
 	}()
 
-	testMessage1 := &Message{Type: "foo", Data: "foodata1"}
-	testMessage2 := &Message{Type: "foo", Data: "foodata2"}
-	testMessage3 := &Message{Type: "bar", Data: "bardata1"}
-	testMessage4 := &Message{Type: "bar", Data: "bardata2"}
+	testMessage1 := &testMessage{id: "foo", data: "foodata1"}
+	testMessage2 := &testMessage{id: "foo", data: "foodata2"}
+	testMessage3 := &testMessage{id: "bar", data: "bardata1"}
+	testMessage4 := &testMessage{id: "bar", data: "bardata2"}
 
 	proxy.In(testMessage1)
 	proxy.In(testMessage2)
@@ -239,8 +252,8 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 
 	<-wait
 
-	expect1 := &Message{Type: "reducedFoos", Data: "foodata1:foodata2"}
-	expect2 := &Message{Type: "reducedBars", Data: "bardata1:bardata2"}
+	expect1 := &testMessage{id: "reducedFoos", data: "foodata1:foodata2"}
+	expect2 := &testMessage{id: "reducedBars", data: "bardata1:bardata2"}
 
 	require.Contains(t, actual, expect1)
 	require.Contains(t, actual, expect2)

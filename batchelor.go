@@ -6,45 +6,45 @@ import (
 	"time"
 )
 
-type Message struct {
-	Type string      `json:"type"`
-	Data interface{} `json:"data"`
+type Message interface {
+	Type() string
+	Data() interface{}
 }
 
 type Handler struct {
 	Wait   time.Duration
-	Match  func(*Message) (string, bool)
+	Match  func(Message) (string, bool)
 	Reduce reducerFunc
 }
 
-type reducerFunc func(messages []*Message) *Message
+type reducerFunc func(messages []Message) Message
 
 type Proxy struct {
-	in           chan *Message
-	Out          chan *Message
+	in           chan Message
+	Out          chan Message
 	ctx          context.Context
 	handlers     []*Handler
 	queueTimeout chan *timeoutInfo
 }
 
-func (p *Proxy) In(message *Message) {
+func (p *Proxy) In(message Message) {
 	p.in <- message
 }
 
 type queueItem struct {
 	reducer  reducerFunc
-	messages []*Message
+	messages []Message
 }
 
 type queue map[string]*queueItem
 
-func (q queue) enqueue(name string, message *Message, reduer reducerFunc) (appended bool) {
-	var newMessages []*Message
+func (q queue) enqueue(name string, message Message, reduer reducerFunc) (appended bool) {
+	var newMessages []Message
 	forName, has := q[name]
 	if has {
 		newMessages = append(forName.messages, message)
 	} else {
-		newMessages = []*Message{message}
+		newMessages = []Message{message}
 	}
 	q[name] = &queueItem{messages: newMessages, reducer: reduer}
 	return has
@@ -109,8 +109,8 @@ func NewProxy(ctx context.Context, handlers []*Handler) *Proxy {
 	proxy := &Proxy{
 		ctx:          ctx,
 		handlers:     handlers,
-		in:           make(chan *Message),
-		Out:          make(chan *Message),
+		in:           make(chan Message),
+		Out:          make(chan Message),
 		queueTimeout: make(chan *timeoutInfo),
 	}
 	go proxy.listen()
