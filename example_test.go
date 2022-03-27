@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleNewProxy() {
-	firstMessageOnlyHandler := &batchelor.Handler{
+	myHandler := &batchelor.Handler{
 		Wait: 3 * time.Second,
 		Match: func(msg batchelor.Message) (string, bool) {
 			if msg.Type() != "some-type" {
@@ -29,7 +29,7 @@ func ExampleNewProxy() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	proxy := batchelor.NewProxy(ctx, []*batchelor.Handler{firstMessageOnlyHandler})
+	proxy := batchelor.NewProxy(ctx, []*batchelor.Handler{myHandler})
 
 	proxy.In(&testMessage{id: "some-type", data: "data1"})
 	proxy.In(&testMessage{id: "some-type", data: "data2"})
