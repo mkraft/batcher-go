@@ -1,4 +1,4 @@
-# Batchelorgo
+# Batchelor Go
 
 A message batching and/or buffering module for incoming or outgoing messages.
 
