@@ -71,6 +71,37 @@ func (p *Proxy) listen() {
 
 	for {
 		select {
+		case message := <-p.in:
+			var handled bool
+
+			for _, handler := range p.handlers {
+				name, isMatch := handler.Match(message)
+				if !isMatch {
+					continue
+				}
+
+				handled = true
+
+				hasExistingTimeout := q.enqueue(name, message, handler.Reduce)
+				if hasExistingTimeout {
+					continue
+				}
+
+				wg.Add(1)
+				go p.runTimeout(handler.Wait, &timeoutInfo{name: name, reducer: handler.Reduce})
+
+				// break out of the handlers loop so that only one matched handler is ever triggered for a given message
+				break
+			}
+
+			if !handled {
+				// a message that doesn't match any handlers is sent out immediately
+				p.Out <- message
+			}
+		case info := <-p.queueTimeout:
+			p.Out <- info.reducer(q[info.name].messages)
+			delete(q, info.name)
+			wg.Done()
 		case <-p.ctx.Done():
 			// flush all queues manually if context is done
 			for _, item := range q {
@@ -80,29 +111,6 @@ func (p *Proxy) listen() {
 			wg.Wait()
 			close(p.Out)
 			return
-		case message := <-p.in:
-			var wasHandled bool
-			for _, handler := range p.handlers {
-				if name, isMatch := handler.Match(message); isMatch {
-					wasHandled = true
-					hasTimeout := q.enqueue(name, message, handler.Reduce)
-					if !hasTimeout {
-						wg.Add(1)
-						go p.runTimeout(handler.Wait, &timeoutInfo{name: name, reducer: handler.Reduce})
-					}
-					// break out of the p.handlers loop so that only one matched handler is ever used
-					break
-				}
-			}
-
-			if !wasHandled {
-				// this means it's a message that doesn't match any handlers so send it out immediately
-				p.Out <- message
-			}
-		case info := <-p.queueTimeout:
-			p.Out <- info.reducer(q[info.name].messages)
-			delete(q, info.name)
-			wg.Done()
 		}
 	}
 }
