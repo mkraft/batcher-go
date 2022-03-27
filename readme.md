@@ -20,4 +20,4 @@ make test
 
 ## Godoc
 
-https://pkg.go.dev/github.com/mkraft/batchelorg
+https://pkg.go.dev/github.com/mkraft/batchelorgo

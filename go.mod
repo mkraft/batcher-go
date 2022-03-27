@@ -1,4 +1,4 @@
-module github.com/mkraft/batchelorg
+module github.com/mkraft/batchelorgo
 
 go 1.18
 
