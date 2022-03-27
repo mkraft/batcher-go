@@ -259,3 +259,34 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 	require.Contains(t, actual, expect1)
 	require.Contains(t, actual, expect2)
 }
+
+func BenchmarkQueue(b *testing.B) {
+	testHandler := &batchelor.Handler{
+		Wait:  5 * time.Millisecond,
+		Match: func(msg batchelor.Message) (string, bool) { return "fooQueue", true },
+		Reduce: func(messages []batchelor.Message) batchelor.Message {
+			return messages[0]
+		},
+	}
+
+	proxy := batchelor.NewProxy(context.Background(), []*batchelor.Handler{testHandler})
+
+	wait := make(chan bool)
+	actual := []batchelor.Message{}
+
+	go func() {
+		for message := range proxy.Out {
+			actual = append(actual, message)
+		}
+		wait <- true
+	}()
+
+	go func() {
+		for range proxy.Out {
+		}
+	}()
+
+	for n := 0; n < b.N; n++ {
+		proxy.In(&testMessage{id: "foo", data: fmt.Sprintf("data%d", n)})
+	}
+}
