@@ -16,7 +16,7 @@ type Handler struct {
 	Match func(interface{}) (string, bool)
 }
 
-type batcher struct {
+type Batcher struct {
 	in           chan interface{}
 	Out          chan []interface{}
 	ctx          context.Context
@@ -25,13 +25,13 @@ type batcher struct {
 }
 
 // In takes messages in from the stream.
-func (p *batcher) In(message interface{}) {
+func (p *Batcher) In(message interface{}) {
 	p.in <- message
 }
 
 // NewBatcher is the factory.
-func NewBatcher(ctx context.Context, handlers []*Handler) *batcher {
-	batcher := &batcher{
+func NewBatcher(ctx context.Context, handlers []*Handler) *Batcher {
+	batcher := &Batcher{
 		ctx:          ctx,
 		handlers:     handlers,
 		in:           make(chan interface{}),
@@ -42,7 +42,7 @@ func NewBatcher(ctx context.Context, handlers []*Handler) *batcher {
 	return batcher
 }
 
-func (p *batcher) listen() {
+func (p *Batcher) listen() {
 	q := make(queue)
 
 	for {
@@ -87,7 +87,7 @@ func (p *batcher) listen() {
 	}
 }
 
-func (p *batcher) runTimeout(dur time.Duration, name string) {
+func (p *Batcher) runTimeout(dur time.Duration, name string) {
 	select {
 	case <-time.After(dur):
 		p.queueTimeout <- name
