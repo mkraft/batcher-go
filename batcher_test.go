@@ -107,7 +107,7 @@ func outputToTestMessages(raw []interface{}) []*testMessage {
 	for _, item := range raw {
 		message, ok := item.(*testMessage)
 		if !ok {
-			panic("wrong type")
+			return nil
 		}
 		messages = append(messages, message)
 	}
@@ -119,9 +119,7 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 		Wait: time.Minute,
 		Match: func(raw interface{}) (string, bool) {
 			msg, ok := raw.(*testMessage)
-			if !ok {
-				panic("wrong type")
-			}
+			require.True(t, ok)
 			if msg.id != "foo" {
 				return "", false
 			}
@@ -132,9 +130,7 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 		Wait: time.Minute,
 		Match: func(raw interface{}) (string, bool) {
 			msg, ok := raw.(*testMessage)
-			if !ok {
-				panic("wrong type")
-			}
+			require.True(t, ok)
 			if msg.id != "bar" {
 				return "", false
 			}
@@ -177,9 +173,7 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 		Wait: testWaitDur,
 		Match: func(raw interface{}) (string, bool) {
 			msg, ok := raw.(*testMessage)
-			if !ok {
-				panic("wrong type")
-			}
+			require.True(t, ok)
 			if msg.id != "foo" {
 				return "", false
 			}
@@ -190,9 +184,7 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 		Wait: testWaitDur,
 		Match: func(raw interface{}) (string, bool) {
 			msg, ok := raw.(*testMessage)
-			if !ok {
-				panic("wrong type")
-			}
+			require.True(t, ok)
 			if msg.id != "bar" {
 				return "", false
 			}

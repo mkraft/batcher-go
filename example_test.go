@@ -3,6 +3,7 @@ package batcher_test
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/mkraft/batcher-go"
@@ -14,7 +15,8 @@ func ExampleNewBatcher() {
 		Match: func(raw interface{}) (string, bool) {
 			msg, ok := raw.(*testMessage)
 			if !ok {
-				panic("wrong type")
+				log.Printf("wrong type: %v", raw)
+				return "", false
 			}
 			if msg.id != "some-type" {
 				return "", false
