@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	batchelor "github.com/mkraft/batchelorgo/v2"
+	batchelor "github.com/mkraft/batchelorgo"
 )
 
 func ExampleNewProxy() {
