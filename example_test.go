@@ -8,7 +8,7 @@ import (
 	"github.com/mkraft/batcher-go"
 )
 
-func ExampleNewProxy() {
+func ExampleNewBatcher() {
 	myHandler := &batcher.Handler{
 		Wait: 3 * time.Second,
 		Match: func(msg batcher.Message) (string, bool) {
@@ -21,14 +21,14 @@ func ExampleNewProxy() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	proxy := batcher.NewBatcher(ctx, []*batcher.Handler{myHandler})
+	batcher := batcher.NewBatcher(ctx, []*batcher.Handler{myHandler})
 
-	proxy.In(&testMessage{id: "some-type", data: "data1"})
-	proxy.In(&testMessage{id: "some-type", data: "data2"})
+	batcher.In(&testMessage{id: "some-type", data: "data1"})
+	batcher.In(&testMessage{id: "some-type", data: "data2"})
 
 	cancel()
 
-	fmt.Printf("%+v", <-proxy.Out)
+	fmt.Printf("%+v", <-batcher.Out)
 
 	// Output: [id: some-type, data: data1 id: some-type, data: data2]
 }

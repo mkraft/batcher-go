@@ -98,7 +98,7 @@ func (p *Batcher) runTimeout(dur time.Duration, name string) {
 		return
 	case <-p.ctx.Done():
 		// when the context is done return from the listen immediately
-		// and let the ctx.Done select case in (*Proxy).listen send out
+		// and let the ctx.Done select case in (*Batcher).listen send out
 		// all of the messages in the queue, rather than using queueTimeout case.
 		return
 	}
@@ -106,13 +106,13 @@ func (p *Batcher) runTimeout(dur time.Duration, name string) {
 
 // NewBatcher is the factory.
 func NewBatcher(ctx context.Context, handlers []*Handler) *Batcher {
-	proxy := &Batcher{
+	batcher := &Batcher{
 		ctx:          ctx,
 		handlers:     handlers,
 		in:           make(chan Message),
 		Out:          make(chan []Message),
 		queueTimeout: make(chan string),
 	}
-	go proxy.listen()
-	return proxy
+	go batcher.listen()
+	return batcher
 }

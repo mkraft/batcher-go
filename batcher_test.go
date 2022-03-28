@@ -31,13 +31,13 @@ func TestNotHandled(t *testing.T) {
 		Match: noOpMatcher,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := batcher.NewBatcher(ctx, []*batcher.Handler{testHandler})
+	btcr := batcher.NewBatcher(ctx, []*batcher.Handler{testHandler})
 
 	wait := make(chan bool)
 	actual := []batcher.Message{}
 
 	go func() {
-		for messages := range proxy.Out {
+		for messages := range btcr.Out {
 			actual = append(actual, messages...)
 		}
 		wait <- true
@@ -46,8 +46,8 @@ func TestNotHandled(t *testing.T) {
 	testMessage1 := &testMessage{id: "foo", data: "test123"}
 	testMessage2 := &testMessage{id: "bar", data: "test456"}
 
-	proxy.In(testMessage1)
-	proxy.In(testMessage2)
+	btcr.In(testMessage1)
+	btcr.In(testMessage2)
 
 	cancel()
 
@@ -63,17 +63,17 @@ func TestHandled_ContextCancel(t *testing.T) {
 		Match: func(msg batcher.Message) (string, bool) { return "fooQueue", true },
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := batcher.NewBatcher(ctx, []*batcher.Handler{testHandler})
+	btcr := batcher.NewBatcher(ctx, []*batcher.Handler{testHandler})
 
 	testMessage1 := &testMessage{id: "foo"}
 	testMessage2 := &testMessage{id: "foo"}
 
-	proxy.In(testMessage1)
-	proxy.In(testMessage2)
+	btcr.In(testMessage1)
+	btcr.In(testMessage2)
 
 	cancel()
 
-	actual := <-proxy.Out
+	actual := <-btcr.Out
 
 	require.Len(t, actual, 2)
 }
@@ -85,20 +85,20 @@ func TestHandled_QueueTimeout(t *testing.T) {
 		Match: func(msg batcher.Message) (string, bool) { return "fooQueue", true },
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := batcher.NewBatcher(ctx, []*batcher.Handler{testHandler})
+	btcr := batcher.NewBatcher(ctx, []*batcher.Handler{testHandler})
 
 	testMessage1 := &testMessage{id: "foo"}
 	testMessage2 := &testMessage{id: "foo"}
 
-	proxy.In(testMessage1)
-	proxy.In(testMessage2)
+	btcr.In(testMessage1)
+	btcr.In(testMessage2)
 
 	go func() {
 		time.Sleep(2 * testWaitDur)
 		cancel()
 	}()
 
-	actual := <-proxy.Out
+	actual := <-btcr.Out
 
 	require.Equal(t, actual[0].ID(), "foo")
 	require.Equal(t, actual[1].ID(), "foo")
@@ -124,22 +124,22 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := batcher.NewBatcher(ctx, []*batcher.Handler{fooHandler, barHandler})
+	btcr := batcher.NewBatcher(ctx, []*batcher.Handler{fooHandler, barHandler})
 
 	testMessage1 := &testMessage{id: "foo"}
 	testMessage2 := &testMessage{id: "foo"}
 	testMessage3 := &testMessage{id: "bar"}
 	testMessage4 := &testMessage{id: "bar"}
 
-	proxy.In(testMessage1)
-	proxy.In(testMessage2)
-	proxy.In(testMessage3)
-	proxy.In(testMessage4)
+	btcr.In(testMessage1)
+	btcr.In(testMessage2)
+	btcr.In(testMessage3)
+	btcr.In(testMessage4)
 
 	cancel()
 
-	actual1 := <-proxy.Out
-	actual2 := <-proxy.Out
+	actual1 := <-btcr.Out
+	actual2 := <-btcr.Out
 
 	if actual1[0].ID() == "foo" {
 		require.Equal(t, actual1[0].ID(), "foo")
@@ -174,25 +174,25 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := batcher.NewBatcher(ctx, []*batcher.Handler{fooHandler, barHandler})
+	btcr := batcher.NewBatcher(ctx, []*batcher.Handler{fooHandler, barHandler})
 
 	testMessage1 := &testMessage{id: "foo", data: "foodata1"}
 	testMessage2 := &testMessage{id: "foo", data: "foodata2"}
 	testMessage3 := &testMessage{id: "bar", data: "bardata1"}
 	testMessage4 := &testMessage{id: "bar", data: "bardata2"}
 
-	proxy.In(testMessage1)
-	proxy.In(testMessage2)
-	proxy.In(testMessage3)
-	proxy.In(testMessage4)
+	btcr.In(testMessage1)
+	btcr.In(testMessage2)
+	btcr.In(testMessage3)
+	btcr.In(testMessage4)
 
 	go func() {
 		time.Sleep(2 * testWaitDur)
 		cancel()
 	}()
 
-	actual1 := <-proxy.Out
-	actual2 := <-proxy.Out
+	actual1 := <-btcr.Out
+	actual2 := <-btcr.Out
 
 	if actual1[0].ID() == "foo" {
 		require.Equal(t, actual1[0].ID(), "foo")
@@ -212,24 +212,24 @@ func BenchmarkQueue(b *testing.B) {
 		Match: func(msg batcher.Message) (string, bool) { return "fooQueue", true },
 	}
 
-	proxy := batcher.NewBatcher(context.Background(), []*batcher.Handler{testHandler})
+	btcr := batcher.NewBatcher(context.Background(), []*batcher.Handler{testHandler})
 
 	wait := make(chan bool)
 	actual := []batcher.Message{}
 
 	go func() {
-		for messages := range proxy.Out {
+		for messages := range btcr.Out {
 			actual = append(actual, messages...)
 		}
 		wait <- true
 	}()
 
 	go func() {
-		for range proxy.Out {
+		for range btcr.Out {
 		}
 	}()
 
 	for n := 0; n < b.N; n++ {
-		proxy.In(&testMessage{id: "foo", data: fmt.Sprintf("data%d", n)})
+		btcr.In(&testMessage{id: "foo", data: fmt.Sprintf("data%d", n)})
 	}
 }
