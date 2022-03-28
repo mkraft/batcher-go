@@ -1,17 +1,17 @@
-package batchelor_test
+package batcher_test
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	batchelor "github.com/mkraft/batchelorgo"
+	batcher "github.com/mkraft/batcher-go"
 )
 
 func ExampleNewProxy() {
-	myHandler := &batchelor.Handler{
+	myHandler := &batcher.Handler{
 		Wait: 3 * time.Second,
-		Match: func(msg batchelor.Message) (string, bool) {
+		Match: func(msg batcher.Message) (string, bool) {
 			if msg.Type() != "some-type" {
 				return "", false
 			}
@@ -21,7 +21,7 @@ func ExampleNewProxy() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	proxy := batchelor.NewProxy(ctx, []*batchelor.Handler{myHandler})
+	proxy := batcher.NewProxy(ctx, []*batcher.Handler{myHandler})
 
 	proxy.In(&testMessage{id: "some-type", data: "data1"})
 	proxy.In(&testMessage{id: "some-type", data: "data2"})

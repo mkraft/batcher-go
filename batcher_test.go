@@ -1,4 +1,4 @@
-package batchelor_test
+package batcher_test
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	batchelor "github.com/mkraft/batchelorgo"
+	batcher "github.com/mkraft/batcher-go"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,17 +24,17 @@ func (m *testMessage) String() string {
 }
 
 func TestNotHandled(t *testing.T) {
-	noOpMatcher := func(msg batchelor.Message) (string, bool) { return "", false }
+	noOpMatcher := func(msg batcher.Message) (string, bool) { return "", false }
 
-	testHandler := &batchelor.Handler{
+	testHandler := &batcher.Handler{
 		Wait:  0,
 		Match: noOpMatcher,
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := batchelor.NewProxy(ctx, []*batchelor.Handler{testHandler})
+	proxy := batcher.NewProxy(ctx, []*batcher.Handler{testHandler})
 
 	wait := make(chan bool)
-	actual := []batchelor.Message{}
+	actual := []batcher.Message{}
 
 	go func() {
 		for messages := range proxy.Out {
@@ -58,12 +58,12 @@ func TestNotHandled(t *testing.T) {
 }
 
 func TestHandled_ContextCancel(t *testing.T) {
-	testHandler := &batchelor.Handler{
+	testHandler := &batcher.Handler{
 		Wait:  time.Minute,
-		Match: func(msg batchelor.Message) (string, bool) { return "fooQueue", true },
+		Match: func(msg batcher.Message) (string, bool) { return "fooQueue", true },
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := batchelor.NewProxy(ctx, []*batchelor.Handler{testHandler})
+	proxy := batcher.NewProxy(ctx, []*batcher.Handler{testHandler})
 
 	testMessage1 := &testMessage{id: "foo"}
 	testMessage2 := &testMessage{id: "foo"}
@@ -80,12 +80,12 @@ func TestHandled_ContextCancel(t *testing.T) {
 
 func TestHandled_QueueTimeout(t *testing.T) {
 	testWaitDur := time.Second
-	testHandler := &batchelor.Handler{
+	testHandler := &batcher.Handler{
 		Wait:  testWaitDur,
-		Match: func(msg batchelor.Message) (string, bool) { return "fooQueue", true },
+		Match: func(msg batcher.Message) (string, bool) { return "fooQueue", true },
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := batchelor.NewProxy(ctx, []*batchelor.Handler{testHandler})
+	proxy := batcher.NewProxy(ctx, []*batcher.Handler{testHandler})
 
 	testMessage1 := &testMessage{id: "foo"}
 	testMessage2 := &testMessage{id: "foo"}
@@ -105,18 +105,18 @@ func TestHandled_QueueTimeout(t *testing.T) {
 }
 
 func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
-	fooHandler := &batchelor.Handler{
+	fooHandler := &batcher.Handler{
 		Wait: time.Minute,
-		Match: func(msg batchelor.Message) (string, bool) {
+		Match: func(msg batcher.Message) (string, bool) {
 			if msg.Type() != "foo" {
 				return "", false
 			}
 			return "fooQueue", true
 		},
 	}
-	barHandler := &batchelor.Handler{
+	barHandler := &batcher.Handler{
 		Wait: time.Minute,
-		Match: func(msg batchelor.Message) (string, bool) {
+		Match: func(msg batcher.Message) (string, bool) {
 			if msg.Type() != "bar" {
 				return "", false
 			}
@@ -124,7 +124,7 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := batchelor.NewProxy(ctx, []*batchelor.Handler{fooHandler, barHandler})
+	proxy := batcher.NewProxy(ctx, []*batcher.Handler{fooHandler, barHandler})
 
 	testMessage1 := &testMessage{id: "foo"}
 	testMessage2 := &testMessage{id: "foo"}
@@ -155,18 +155,18 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 
 func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 	testWaitDur := time.Second
-	fooHandler := &batchelor.Handler{
+	fooHandler := &batcher.Handler{
 		Wait: testWaitDur,
-		Match: func(msg batchelor.Message) (string, bool) {
+		Match: func(msg batcher.Message) (string, bool) {
 			if msg.Type() != "foo" {
 				return "", false
 			}
 			return "fooQueue", true
 		},
 	}
-	barHandler := &batchelor.Handler{
+	barHandler := &batcher.Handler{
 		Wait: testWaitDur,
-		Match: func(msg batchelor.Message) (string, bool) {
+		Match: func(msg batcher.Message) (string, bool) {
 			if msg.Type() != "bar" {
 				return "", false
 			}
@@ -174,7 +174,7 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 		},
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	proxy := batchelor.NewProxy(ctx, []*batchelor.Handler{fooHandler, barHandler})
+	proxy := batcher.NewProxy(ctx, []*batcher.Handler{fooHandler, barHandler})
 
 	testMessage1 := &testMessage{id: "foo", data: "foodata1"}
 	testMessage2 := &testMessage{id: "foo", data: "foodata2"}
@@ -207,15 +207,15 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 }
 
 func BenchmarkQueue(b *testing.B) {
-	testHandler := &batchelor.Handler{
+	testHandler := &batcher.Handler{
 		Wait:  5 * time.Millisecond,
-		Match: func(msg batchelor.Message) (string, bool) { return "fooQueue", true },
+		Match: func(msg batcher.Message) (string, bool) { return "fooQueue", true },
 	}
 
-	proxy := batchelor.NewProxy(context.Background(), []*batchelor.Handler{testHandler})
+	proxy := batcher.NewProxy(context.Background(), []*batcher.Handler{testHandler})
 
 	wait := make(chan bool)
-	actual := []batchelor.Message{}
+	actual := []batcher.Message{}
 
 	go func() {
 		for messages := range proxy.Out {

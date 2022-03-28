@@ -1,4 +1,4 @@
-package batchelor
+package batcher
 
 import (
 	"context"
