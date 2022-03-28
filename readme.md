@@ -22,7 +22,7 @@ import "github.com/mkraft/batcher-go"
 
 ## Example usage
 
-https://github.com/mkraft/wsproxy
+https://github.com/mkraft/batcher-go-example
 
 ## Test/benchmark
 
