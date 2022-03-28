@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	batcher "github.com/mkraft/batcher-go"
+	"github.com/mkraft/batcher-go"
 )
 
 func ExampleNewProxy() {
@@ -21,7 +21,7 @@ func ExampleNewProxy() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	proxy := batcher.NewProxy(ctx, []*batcher.Handler{myHandler})
+	proxy := batcher.NewBatcher(ctx, []*batcher.Handler{myHandler})
 
 	proxy.In(&testMessage{id: "some-type", data: "data1"})
 	proxy.In(&testMessage{id: "some-type", data: "data2"})

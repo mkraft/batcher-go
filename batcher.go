@@ -20,7 +20,7 @@ type Handler struct {
 	Match func(Message) (string, bool)
 }
 
-type Proxy struct {
+type Batcher struct {
 	in           chan Message
 	Out          chan []Message
 	ctx          context.Context
@@ -28,7 +28,7 @@ type Proxy struct {
 	queueTimeout chan *timeoutInfo
 }
 
-func (p *Proxy) In(message Message) {
+func (p *Batcher) In(message Message) {
 	p.in <- message
 }
 
@@ -54,7 +54,7 @@ type timeoutInfo struct {
 	name string
 }
 
-func (p *Proxy) listen() {
+func (p *Batcher) listen() {
 	q := make(queue)
 
 	for {
@@ -99,7 +99,7 @@ func (p *Proxy) listen() {
 	}
 }
 
-func (p *Proxy) runTimeout(dur time.Duration, info *timeoutInfo) {
+func (p *Batcher) runTimeout(dur time.Duration, info *timeoutInfo) {
 	select {
 	case <-time.After(dur):
 		p.queueTimeout <- info
@@ -112,9 +112,9 @@ func (p *Proxy) runTimeout(dur time.Duration, info *timeoutInfo) {
 	}
 }
 
-// NewProxy is the factory.
-func NewProxy(ctx context.Context, handlers []*Handler) *Proxy {
-	proxy := &Proxy{
+// NewBatcher is the factory.
+func NewBatcher(ctx context.Context, handlers []*Handler) *Batcher {
+	proxy := &Batcher{
 		ctx:          ctx,
 		handlers:     handlers,
 		in:           make(chan Message),
