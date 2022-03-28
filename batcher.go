@@ -16,7 +16,7 @@ type Handler struct {
 	Match func(interface{}) (string, bool)
 }
 
-type Batcher struct {
+type batcher struct {
 	in           chan interface{}
 	Out          chan []interface{}
 	ctx          context.Context
@@ -24,25 +24,25 @@ type Batcher struct {
 	queueTimeout chan string
 }
 
-func (p *Batcher) In(message interface{}) {
+// In takes messages in from the stream.
+func (p *batcher) In(message interface{}) {
 	p.in <- message
 }
 
-type queue map[string][]interface{}
-
-func (q queue) enqueue(name string, message interface{}) (appended bool) {
-	var newMessages []interface{}
-	forName, has := q[name]
-	if has {
-		newMessages = append(forName, message)
-	} else {
-		newMessages = []interface{}{message}
+// NewBatcher is the factory.
+func NewBatcher(ctx context.Context, handlers []*Handler) *batcher {
+	batcher := &batcher{
+		ctx:          ctx,
+		handlers:     handlers,
+		in:           make(chan interface{}),
+		Out:          make(chan []interface{}),
+		queueTimeout: make(chan string),
 	}
-	q[name] = newMessages
-	return has
+	go batcher.listen()
+	return batcher
 }
 
-func (p *Batcher) listen() {
+func (p *batcher) listen() {
 	q := make(queue)
 
 	for {
@@ -87,7 +87,7 @@ func (p *Batcher) listen() {
 	}
 }
 
-func (p *Batcher) runTimeout(dur time.Duration, name string) {
+func (p *batcher) runTimeout(dur time.Duration, name string) {
 	select {
 	case <-time.After(dur):
 		p.queueTimeout <- name
@@ -98,17 +98,4 @@ func (p *Batcher) runTimeout(dur time.Duration, name string) {
 		// all of the messages in the queue, rather than using queueTimeout case.
 		return
 	}
-}
-
-// NewBatcher is the factory.
-func NewBatcher(ctx context.Context, handlers []*Handler) *Batcher {
-	batcher := &Batcher{
-		ctx:          ctx,
-		handlers:     handlers,
-		in:           make(chan interface{}),
-		Out:          make(chan []interface{}),
-		queueTimeout: make(chan string),
-	}
-	go batcher.listen()
-	return batcher
 }
