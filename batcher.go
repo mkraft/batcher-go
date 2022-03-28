@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Handler configures a desired behavior for a category or type of messages.
+// Handler configures a desired behavior for a queue category.
 type Handler struct {
 	// Wait is the total duration that a queue will continue enqueuing like messages after the first
 	// one is received.
