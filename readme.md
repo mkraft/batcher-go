@@ -1,6 +1,6 @@
 # Batcher Go
 
-Converts a heterogeneous or homogeneous stream into categorized batches.
+Converts a stream into categorized batches.
 
 ## Install
 
