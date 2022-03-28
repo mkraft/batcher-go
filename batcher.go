@@ -25,33 +25,25 @@ type Batcher struct {
 	Out          chan []Message
 	ctx          context.Context
 	handlers     []*Handler
-	queueTimeout chan *timeoutInfo
+	queueTimeout chan string
 }
 
 func (p *Batcher) In(message Message) {
 	p.in <- message
 }
 
-type queueItem struct {
-	messages []Message
-}
-
-type queue map[string]*queueItem
+type queue map[string][]Message
 
 func (q queue) enqueue(name string, message Message) (appended bool) {
 	var newMessages []Message
 	forName, has := q[name]
 	if has {
-		newMessages = append(forName.messages, message)
+		newMessages = append(forName, message)
 	} else {
 		newMessages = []Message{message}
 	}
-	q[name] = &queueItem{messages: newMessages}
+	q[name] = newMessages
 	return has
-}
-
-type timeoutInfo struct {
-	name string
 }
 
 func (p *Batcher) listen() {
@@ -75,7 +67,7 @@ func (p *Batcher) listen() {
 					continue
 				}
 
-				go p.runTimeout(handler.Wait, &timeoutInfo{name: name})
+				go p.runTimeout(handler.Wait, name)
 
 				// break out of the handlers loop so that only one matched handler is ever triggered for a given message
 				break
@@ -85,13 +77,13 @@ func (p *Batcher) listen() {
 				// a message that doesn't match any handlers is sent out immediately
 				p.Out <- []Message{message}
 			}
-		case info := <-p.queueTimeout:
-			p.Out <- q[info.name].messages
-			delete(q, info.name)
+		case name := <-p.queueTimeout:
+			p.Out <- q[name]
+			delete(q, name)
 		case <-p.ctx.Done():
 			// flush all queues manually if context is done
 			for _, item := range q {
-				p.Out <- item.messages
+				p.Out <- item
 			}
 			close(p.Out)
 			return
@@ -99,10 +91,10 @@ func (p *Batcher) listen() {
 	}
 }
 
-func (p *Batcher) runTimeout(dur time.Duration, info *timeoutInfo) {
+func (p *Batcher) runTimeout(dur time.Duration, name string) {
 	select {
 	case <-time.After(dur):
-		p.queueTimeout <- info
+		p.queueTimeout <- name
 		return
 	case <-p.ctx.Done():
 		// when the context is done return from the listen immediately
@@ -119,7 +111,7 @@ func NewBatcher(ctx context.Context, handlers []*Handler) *Batcher {
 		handlers:     handlers,
 		in:           make(chan Message),
 		Out:          make(chan []Message),
-		queueTimeout: make(chan *timeoutInfo),
+		queueTimeout: make(chan string),
 	}
 	go proxy.listen()
 	return proxy
