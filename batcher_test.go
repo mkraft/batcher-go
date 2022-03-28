@@ -15,10 +15,6 @@ type testMessage struct {
 	data interface{}
 }
 
-func (m *testMessage) ID() string {
-	return m.id
-}
-
 func (m *testMessage) String() string {
 	return fmt.Sprintf("id: %s, data: %v", m.id, m.data)
 }
@@ -51,9 +47,7 @@ func TestNotHandled(t *testing.T) {
 
 	cancel()
 
-	for messages := range btcr.Out {
-		actual = append(actual, messages...)
-	}
+	<-wait
 
 	require.Contains(t, actual, testMessage1)
 	require.Contains(t, actual, testMessage2)
@@ -104,8 +98,8 @@ func TestHandled_QueueTimeout(t *testing.T) {
 
 	actual := outputToTestMessages(output)
 
-	require.Equal(t, actual[0].ID(), "foo")
-	require.Equal(t, actual[1].ID(), "foo")
+	require.Equal(t, actual[0].id, "foo")
+	require.Equal(t, actual[1].id, "foo")
 }
 
 func outputToTestMessages(raw []interface{}) []*testMessage {
@@ -128,7 +122,7 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 			if !ok {
 				panic("wrong type")
 			}
-			if msg.ID() != "foo" {
+			if msg.id != "foo" {
 				return "", false
 			}
 			return "fooQueue", true
@@ -141,7 +135,7 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 			if !ok {
 				panic("wrong type")
 			}
-			if msg.ID() != "bar" {
+			if msg.id != "bar" {
 				return "", false
 			}
 			return "barQueue", true
@@ -165,12 +159,12 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 	actual1 := outputToTestMessages(<-btcr.Out)
 	actual2 := outputToTestMessages(<-btcr.Out)
 
-	if actual1[0].ID() == "foo" {
-		require.Equal(t, actual1[0].ID(), "foo")
-		require.Equal(t, actual2[0].ID(), "bar")
+	if actual1[0].id == "foo" {
+		require.Equal(t, actual1[0].id, "foo")
+		require.Equal(t, actual2[0].id, "bar")
 	} else {
-		require.Equal(t, actual1[0].ID(), "bar")
-		require.Equal(t, actual2[0].ID(), "foo")
+		require.Equal(t, actual1[0].id, "bar")
+		require.Equal(t, actual2[0].id, "foo")
 	}
 
 	require.Len(t, actual1, 2)
@@ -186,7 +180,7 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 			if !ok {
 				panic("wrong type")
 			}
-			if msg.ID() != "foo" {
+			if msg.id != "foo" {
 				return "", false
 			}
 			return "fooQueue", true
@@ -199,7 +193,7 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 			if !ok {
 				panic("wrong type")
 			}
-			if msg.ID() != "bar" {
+			if msg.id != "bar" {
 				return "", false
 			}
 			return "barQueue", true
@@ -226,12 +220,12 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 	actual1 := outputToTestMessages(<-btcr.Out)
 	actual2 := outputToTestMessages(<-btcr.Out)
 
-	if actual1[0].ID() == "foo" {
-		require.Equal(t, actual1[0].ID(), "foo")
-		require.Equal(t, actual2[0].ID(), "bar")
+	if actual1[0].id == "foo" {
+		require.Equal(t, actual1[0].id, "foo")
+		require.Equal(t, actual2[0].id, "bar")
 	} else {
-		require.Equal(t, actual1[0].ID(), "bar")
-		require.Equal(t, actual2[0].ID(), "foo")
+		require.Equal(t, actual1[0].id, "bar")
+		require.Equal(t, actual2[0].id, "foo")
 	}
 
 	require.Len(t, actual1, 2)

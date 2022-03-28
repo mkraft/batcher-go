@@ -16,7 +16,7 @@ func ExampleNewBatcher() {
 			if !ok {
 				panic("wrong type")
 			}
-			if msg.ID() != "some-type" {
+			if msg.id != "some-type" {
 				return "", false
 			}
 			return "some-type-queue", true
