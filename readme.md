@@ -7,7 +7,7 @@ Send messages in, if they meet some criteria then queue them with the other matc
 ## Install
 
 ```shell
-go get github.com/mkraft/batchelorgo
+$ go get github.com/mkraft/batchelorgo
 ```
 
 ## Example
@@ -17,7 +17,8 @@ https://github.com/mkraft/wsproxy
 ## Tests
 
 ```shell
-make test
+$ make test
+$ make benchmark
 ```
 
 ## Godoc
