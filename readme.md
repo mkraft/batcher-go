@@ -1,3 +1,5 @@
+[![Go Reference](https://pkg.go.dev/badge/github.com/mkraft/batcher-go.svg)](https://pkg.go.dev/github.com/mkraft/batcher-go)
+
 # Batcher Go
 
 Converts a stream into categorized batches.
@@ -30,7 +32,3 @@ https://github.com/mkraft/batcher-go-example
 $ make test
 $ make benchmark
 ```
-
-## Godoc
-
-https://pkg.go.dev/github.com/mkraft/batcher-go
