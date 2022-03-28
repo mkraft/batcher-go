@@ -1,24 +1,30 @@
 # Batcher Go
 
-#### Converts a stream into categorized batches.
+Converts a stream into categorized batches.
 
-A `*batcher` receives a stream of messages (which are any `interface{}` instances as defined by the client) via `(*batcher).In`. 
+## Description
 
-Each message goes through the `Match` method of each handler until one or none match. If `Match` returns `true` then the message is put into an in-memory queue as named by the string returned by `Match`. 
+`(*batcher).In` receives a stream of messages (which are any `interface{}` instances as defined by the client). 
 
-After the handler's `Wait` duration elapses, that queue's messages are sent out in a batch (`[]interface{}`) via the `(*batcher).Out` channel.
+Each message goes through the `(*Handler).Match` method of each handler until one or none match. If `(*Handler).Match` returns `true` then the message is put into an in-memory queue as named by the string that `(*Handler).Match` also returned. 
 
-## Install
+After the handler's `(*Handler).Wait` duration elapses, that queue's messages are sent out as a batch (an `[]interface{}`) via the `(*batcher).Out` channel.
+
+## Installation
 
 ```shell
 $ go get github.com/mkraft/batcher-go
 ```
 
-## Example
+```go
+import "github.com/mkraft/batcher-go"
+```
+
+## Example usage
 
 https://github.com/mkraft/wsproxy
 
-## Tests
+## Test/benchmark
 
 ```shell
 $ make test
