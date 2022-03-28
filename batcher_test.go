@@ -100,15 +100,15 @@ func TestHandled_QueueTimeout(t *testing.T) {
 
 	actual := <-proxy.Out
 
-	require.Equal(t, actual[0].Type(), "foo")
-	require.Equal(t, actual[1].Type(), "foo")
+	require.Equal(t, actual[0].ID(), "foo")
+	require.Equal(t, actual[1].ID(), "foo")
 }
 
 func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 	fooHandler := &batcher.Handler{
 		Wait: time.Minute,
 		Match: func(msg batcher.Message) (string, bool) {
-			if msg.Type() != "foo" {
+			if msg.ID() != "foo" {
 				return "", false
 			}
 			return "fooQueue", true
@@ -117,7 +117,7 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 	barHandler := &batcher.Handler{
 		Wait: time.Minute,
 		Match: func(msg batcher.Message) (string, bool) {
-			if msg.Type() != "bar" {
+			if msg.ID() != "bar" {
 				return "", false
 			}
 			return "barQueue", true
@@ -141,12 +141,12 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 	actual1 := <-proxy.Out
 	actual2 := <-proxy.Out
 
-	if actual1[0].Type() == "foo" {
-		require.Equal(t, actual1[0].Type(), "foo")
-		require.Equal(t, actual2[0].Type(), "bar")
+	if actual1[0].ID() == "foo" {
+		require.Equal(t, actual1[0].ID(), "foo")
+		require.Equal(t, actual2[0].ID(), "bar")
 	} else {
-		require.Equal(t, actual1[0].Type(), "bar")
-		require.Equal(t, actual2[0].Type(), "foo")
+		require.Equal(t, actual1[0].ID(), "bar")
+		require.Equal(t, actual2[0].ID(), "foo")
 	}
 
 	require.Len(t, actual1, 2)
@@ -158,7 +158,7 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 	fooHandler := &batcher.Handler{
 		Wait: testWaitDur,
 		Match: func(msg batcher.Message) (string, bool) {
-			if msg.Type() != "foo" {
+			if msg.ID() != "foo" {
 				return "", false
 			}
 			return "fooQueue", true
@@ -167,7 +167,7 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 	barHandler := &batcher.Handler{
 		Wait: testWaitDur,
 		Match: func(msg batcher.Message) (string, bool) {
-			if msg.Type() != "bar" {
+			if msg.ID() != "bar" {
 				return "", false
 			}
 			return "barQueue", true
@@ -194,12 +194,12 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 	actual1 := <-proxy.Out
 	actual2 := <-proxy.Out
 
-	if actual1[0].Type() == "foo" {
-		require.Equal(t, actual1[0].Type(), "foo")
-		require.Equal(t, actual2[0].Type(), "bar")
+	if actual1[0].ID() == "foo" {
+		require.Equal(t, actual1[0].ID(), "foo")
+		require.Equal(t, actual2[0].ID(), "bar")
 	} else {
-		require.Equal(t, actual1[0].Type(), "bar")
-		require.Equal(t, actual2[0].Type(), "foo")
+		require.Equal(t, actual1[0].ID(), "bar")
+		require.Equal(t, actual2[0].ID(), "foo")
 	}
 
 	require.Len(t, actual1, 2)

@@ -6,7 +6,7 @@ import (
 )
 
 type Message interface {
-	Type() string
+	ID() string
 }
 
 // Handler configures a desired behavior for a category or type of messages.

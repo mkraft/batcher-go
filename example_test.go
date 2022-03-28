@@ -12,7 +12,7 @@ func ExampleNewProxy() {
 	myHandler := &batcher.Handler{
 		Wait: 3 * time.Second,
 		Match: func(msg batcher.Message) (string, bool) {
-			if msg.Type() != "some-type" {
+			if msg.ID() != "some-type" {
 				return "", false
 			}
 			return "some-type-queue", true
