@@ -5,10 +5,6 @@ import (
 	"time"
 )
 
-type Message interface {
-	ID() string
-}
-
 // Handler configures a desired behavior for a category or type of messages.
 type Handler struct {
 	// Wait is the total duration that a queue will continue enqueuing like messages after the first
@@ -17,30 +13,30 @@ type Handler struct {
 
 	// Match defined a function that is invoked upon each incoming message. If it returns true then the
 	// given message will be enqueued in a new or existing queue of the returned name.
-	Match func(Message) (string, bool)
+	Match func(interface{}) (string, bool)
 }
 
 type Batcher struct {
-	in           chan Message
-	Out          chan []Message
+	in           chan interface{}
+	Out          chan []interface{}
 	ctx          context.Context
 	handlers     []*Handler
 	queueTimeout chan string
 }
 
-func (p *Batcher) In(message Message) {
+func (p *Batcher) In(message interface{}) {
 	p.in <- message
 }
 
-type queue map[string][]Message
+type queue map[string][]interface{}
 
-func (q queue) enqueue(name string, message Message) (appended bool) {
-	var newMessages []Message
+func (q queue) enqueue(name string, message interface{}) (appended bool) {
+	var newMessages []interface{}
 	forName, has := q[name]
 	if has {
 		newMessages = append(forName, message)
 	} else {
-		newMessages = []Message{message}
+		newMessages = []interface{}{message}
 	}
 	q[name] = newMessages
 	return has
@@ -75,7 +71,7 @@ func (p *Batcher) listen() {
 
 			if !handled {
 				// a message that doesn't match any handlers is sent out immediately
-				p.Out <- []Message{message}
+				p.Out <- []interface{}{message}
 			}
 		case name := <-p.queueTimeout:
 			p.Out <- q[name]
@@ -109,8 +105,8 @@ func NewBatcher(ctx context.Context, handlers []*Handler) *Batcher {
 	batcher := &Batcher{
 		ctx:          ctx,
 		handlers:     handlers,
-		in:           make(chan Message),
-		Out:          make(chan []Message),
+		in:           make(chan interface{}),
+		Out:          make(chan []interface{}),
 		queueTimeout: make(chan string),
 	}
 	go batcher.listen()

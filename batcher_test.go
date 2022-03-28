@@ -24,7 +24,7 @@ func (m *testMessage) String() string {
 }
 
 func TestNotHandled(t *testing.T) {
-	noOpMatcher := func(msg batcher.Message) (string, bool) { return "", false }
+	noOpMatcher := func(msg interface{}) (string, bool) { return "", false }
 
 	testHandler := &batcher.Handler{
 		Wait:  0,
@@ -34,7 +34,7 @@ func TestNotHandled(t *testing.T) {
 	btcr := batcher.NewBatcher(ctx, []*batcher.Handler{testHandler})
 
 	wait := make(chan bool)
-	actual := []batcher.Message{}
+	actual := []interface{}{}
 
 	go func() {
 		for messages := range btcr.Out {
@@ -51,7 +51,9 @@ func TestNotHandled(t *testing.T) {
 
 	cancel()
 
-	<-wait
+	for messages := range btcr.Out {
+		actual = append(actual, messages...)
+	}
 
 	require.Contains(t, actual, testMessage1)
 	require.Contains(t, actual, testMessage2)
@@ -60,7 +62,7 @@ func TestNotHandled(t *testing.T) {
 func TestHandled_ContextCancel(t *testing.T) {
 	testHandler := &batcher.Handler{
 		Wait:  time.Minute,
-		Match: func(msg batcher.Message) (string, bool) { return "fooQueue", true },
+		Match: func(msg interface{}) (string, bool) { return "fooQueue", true },
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	btcr := batcher.NewBatcher(ctx, []*batcher.Handler{testHandler})
@@ -82,7 +84,7 @@ func TestHandled_QueueTimeout(t *testing.T) {
 	testWaitDur := time.Second
 	testHandler := &batcher.Handler{
 		Wait:  testWaitDur,
-		Match: func(msg batcher.Message) (string, bool) { return "fooQueue", true },
+		Match: func(msg interface{}) (string, bool) { return "fooQueue", true },
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	btcr := batcher.NewBatcher(ctx, []*batcher.Handler{testHandler})
@@ -98,16 +100,34 @@ func TestHandled_QueueTimeout(t *testing.T) {
 		cancel()
 	}()
 
-	actual := <-btcr.Out
+	output := <-btcr.Out
+
+	actual := outputToTestMessages(output)
 
 	require.Equal(t, actual[0].ID(), "foo")
 	require.Equal(t, actual[1].ID(), "foo")
 }
 
+func outputToTestMessages(raw []interface{}) []*testMessage {
+	var messages []*testMessage
+	for _, item := range raw {
+		message, ok := item.(*testMessage)
+		if !ok {
+			panic("wrong type")
+		}
+		messages = append(messages, message)
+	}
+	return messages
+}
+
 func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 	fooHandler := &batcher.Handler{
 		Wait: time.Minute,
-		Match: func(msg batcher.Message) (string, bool) {
+		Match: func(raw interface{}) (string, bool) {
+			msg, ok := raw.(*testMessage)
+			if !ok {
+				panic("wrong type")
+			}
 			if msg.ID() != "foo" {
 				return "", false
 			}
@@ -116,7 +136,11 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 	}
 	barHandler := &batcher.Handler{
 		Wait: time.Minute,
-		Match: func(msg batcher.Message) (string, bool) {
+		Match: func(raw interface{}) (string, bool) {
+			msg, ok := raw.(*testMessage)
+			if !ok {
+				panic("wrong type")
+			}
 			if msg.ID() != "bar" {
 				return "", false
 			}
@@ -138,8 +162,8 @@ func TestHandled_ContextCancel_MultipleQueues(t *testing.T) {
 
 	cancel()
 
-	actual1 := <-btcr.Out
-	actual2 := <-btcr.Out
+	actual1 := outputToTestMessages(<-btcr.Out)
+	actual2 := outputToTestMessages(<-btcr.Out)
 
 	if actual1[0].ID() == "foo" {
 		require.Equal(t, actual1[0].ID(), "foo")
@@ -157,7 +181,11 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 	testWaitDur := time.Second
 	fooHandler := &batcher.Handler{
 		Wait: testWaitDur,
-		Match: func(msg batcher.Message) (string, bool) {
+		Match: func(raw interface{}) (string, bool) {
+			msg, ok := raw.(*testMessage)
+			if !ok {
+				panic("wrong type")
+			}
 			if msg.ID() != "foo" {
 				return "", false
 			}
@@ -166,7 +194,11 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 	}
 	barHandler := &batcher.Handler{
 		Wait: testWaitDur,
-		Match: func(msg batcher.Message) (string, bool) {
+		Match: func(raw interface{}) (string, bool) {
+			msg, ok := raw.(*testMessage)
+			if !ok {
+				panic("wrong type")
+			}
 			if msg.ID() != "bar" {
 				return "", false
 			}
@@ -191,8 +223,8 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 		cancel()
 	}()
 
-	actual1 := <-btcr.Out
-	actual2 := <-btcr.Out
+	actual1 := outputToTestMessages(<-btcr.Out)
+	actual2 := outputToTestMessages(<-btcr.Out)
 
 	if actual1[0].ID() == "foo" {
 		require.Equal(t, actual1[0].ID(), "foo")
@@ -209,20 +241,10 @@ func TestHandled_QueueTimeout_MultipleQueues(t *testing.T) {
 func BenchmarkQueue(b *testing.B) {
 	testHandler := &batcher.Handler{
 		Wait:  5 * time.Millisecond,
-		Match: func(msg batcher.Message) (string, bool) { return "fooQueue", true },
+		Match: func(msg interface{}) (string, bool) { return "fooQueue", true },
 	}
 
 	btcr := batcher.NewBatcher(context.Background(), []*batcher.Handler{testHandler})
-
-	wait := make(chan bool)
-	actual := []batcher.Message{}
-
-	go func() {
-		for messages := range btcr.Out {
-			actual = append(actual, messages...)
-		}
-		wait <- true
-	}()
 
 	go func() {
 		for range btcr.Out {

@@ -11,7 +11,11 @@ import (
 func ExampleNewBatcher() {
 	myHandler := &batcher.Handler{
 		Wait: 3 * time.Second,
-		Match: func(msg batcher.Message) (string, bool) {
+		Match: func(raw interface{}) (string, bool) {
+			msg, ok := raw.(*testMessage)
+			if !ok {
+				panic("wrong type")
+			}
 			if msg.ID() != "some-type" {
 				return "", false
 			}
