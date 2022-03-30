@@ -244,13 +244,13 @@ func BenchmarkQueue(b *testing.B) {
 		actual <- i
 	}()
 
-	var j int
+	var expected int
 	for n := 0; n < b.N; n++ {
 		btcr.In(&testMessage{id: "foo", data: fmt.Sprintf("data%d", n)})
-		j++
+		expected++
 	}
 
 	cancel()
 
-	require.Equal(b, j, <-actual)
+	require.Equal(b, expected, <-actual)
 }
