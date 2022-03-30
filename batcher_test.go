@@ -230,14 +230,27 @@ func BenchmarkQueue(b *testing.B) {
 		Match: func(msg interface{}) (string, bool) { return "fooQueue", true },
 	}
 
-	btcr := batcher.NewBatcher(context.Background(), []*batcher.Handler{testHandler})
+	ctx, cancel := context.WithCancel(context.Background())
+	btcr := batcher.NewBatcher(ctx, []*batcher.Handler{testHandler})
 
+	actual := make(chan int)
 	go func() {
-		for range btcr.Out {
+		var i int
+		for batch := range btcr.Out {
+			for range batch {
+				i++
+			}
 		}
+		actual <- i
 	}()
 
+	var j int
 	for n := 0; n < b.N; n++ {
 		btcr.In(&testMessage{id: "foo", data: fmt.Sprintf("data%d", n)})
+		j++
 	}
+
+	cancel()
+
+	require.Equal(b, j, <-actual)
 }
